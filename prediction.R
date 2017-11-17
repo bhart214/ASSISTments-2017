@@ -113,18 +113,18 @@ predict_model.H2OBinomialModel <- function(x, newdata, type, ...) {
 }
 
 # Test our predict_model() function
-predict_model(x = automl_leader, newdata = as.data.frame(test_h2o[,-c(1:2)]), type = 'raw') %>% # not sure about -c(1:2) or -1 only
+predict_model(x = automl_leader, newdata = as.data.frame(test_h2o[,-c(1)]), type = 'raw') %>% # not sure about -c(1:2) or -1 only
   tibble::as_tibble()
 
 # Run lime() on training set
 explainer <- lime::lime(
-  as.data.frame(train_h2o[,-c(1:2)]), 
+  as.data.frame(train_h2o[,-c(1)]), 
   model          = automl_leader, 
   bin_continuous = FALSE)
 
 # Run explain() on explainer
 explanation <- lime::explain(
-  as.data.frame(test_h2o[1:10,-c(1:2)]), 
+  as.data.frame(test_h2o[1:10,-c(1)]), 
   explainer    = explainer, 
   n_labels     = 1, 
   n_features   = 4,
