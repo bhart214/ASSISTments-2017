@@ -41,7 +41,7 @@ test_h2o$isSTEM <- as.factor(test_h2o$isSTEM)
 y <- "isSTEM"
 # Features
 x <- features_and_labels %>% 
-  select(SchoolId:RES_GAMING) %>% 
+  select(SchoolId:Ln) %>% 
   colnames()
 
 # Run the automated machine learning 
@@ -56,6 +56,7 @@ automl_models_h2o <- h2o.automl(
 # Extract leader model
 automl_models_h2o@leaderboard
 automl_leader <- automl_models_h2o@leader
+automl_leader@algorithm
 automl_leader
 h2o.confusionMatrix(automl_leader, train_h2o)
 h2o.confusionMatrix(automl_leader, test_h2o)
