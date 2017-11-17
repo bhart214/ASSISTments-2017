@@ -4,22 +4,8 @@ library(h2o)
 library(lime)
 library(tidyverse)
 
-# read in features
-features <- read_rds("features.rds")
-
-# read in training labels
-labels <- read_csv("training_label.csv")
-
-# join training labels to features
-features_and_labels <- labels %>% 
-  left_join(features)
-features_and_labels[is.na(features_and_labels)] <- 0 # change this to smarter imputation later
-
-features_and_labels$isSTEM <- as.factor(features_and_labels$isSTEM)
-glimpse(features_and_labels)
-
-features_and_labels <- features_and_labels %>% 
-  select(isSTEM, everything())
+# read in validation set
+features_and_labels <- read_rds("validation_set.rds")
 
 h2o.init()
 
@@ -78,9 +64,13 @@ table(test_performance$pred, test_performance$isSTEM)
 holdout_data <- read_csv("validation_test_label.csv")
 glimpse(holdout_data)
 
+holdout_data$MCAS[holdout_data$MCAS == -999] <- NA
+
+holdout_data$MCAS[is.na(holdout_data$MCAS)] <- -0.6965 + holdout_data$AveCorrect[is.na(holdout_data$MCAS)]*75.3698
+
+
 holdout_data <- holdout_data %>% 
   left_join(features)
-holdout_data[is.na(holdout_data)] <- 0
 
 
 holdout_data_h2o <- as.h2o(holdout_data)
@@ -89,7 +79,57 @@ pred_holdout <- h2o.predict(object = automl_leader, newdata = holdout_data_h2o)
 holdout_predictions <- as_data_frame(pred_holdout)
 
 # comma-separated list of holdout
-length(holdout_predictions$predict) # check to make sure there are 172
+length(holdout_predictions$p1) # check to make sure there are 172
+table(holdout_predictions$predict)
 paste(holdout_predictions$predict, collapse = ",")
 
 
+### LIME
+class(automl_leader)
+
+# Setup lime::model_type() function for h2o
+model_type.H2OBinomialModel <- function(x, ...) {
+  # Function tells lime() what model type we are dealing with
+  # 'classification', 'regression', 'survival', 'clustering', 'multilabel', etc
+  #
+  # x is our h2o model
+  
+  return("classification")
+}
+
+# Setup lime::predict_model() function for h2o
+predict_model.H2OBinomialModel <- function(x, newdata, type, ...) {
+  # Function performs prediction and returns dataframe with Response
+  #
+  # x is h2o model
+  # newdata is data frame
+  # type is only setup for data frame
+  
+  pred <- h2o.predict(x, as.h2o(newdata))
+  
+  # return probs
+  return(as.data.frame(pred[,-1]))
+  
+}
+
+# Test our predict_model() function
+predict_model(x = automl_leader, newdata = as.data.frame(test_h2o[,-c(1:2)]), type = 'raw') %>% # not sure about -c(1:2) or -1 only
+  tibble::as_tibble()
+
+# Run lime() on training set
+explainer <- lime::lime(
+  as.data.frame(train_h2o[,-c(1:2)]), 
+  model          = automl_leader, 
+  bin_continuous = FALSE)
+
+# Run explain() on explainer
+explanation <- lime::explain(
+  as.data.frame(test_h2o[1:10,-c(1:2)]), 
+  explainer    = explainer, 
+  n_labels     = 1, 
+  n_features   = 4,
+  kernel_width = 0.5)
+
+plot_features(explanation) +
+  labs(title = "HR Predictive Analytics: LIME Feature Importance Visualization",
+       subtitle = "Hold Out (Test) Set, First 10 Cases Shown")

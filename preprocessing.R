@@ -22,7 +22,10 @@ student_logs <- student_logs %>%
 # Group by user and summarize using mean
 features <- student_logs %>% 
   group_by(ITEST_id) %>% 
-  summarize_all(.funs = mean, na.rm = TRUE)
+  summarize_all(.funs = mean, na.rm = TRUE) %>% 
+  rename(Ln.1 = `Ln-1`)
+
+write_rds(features, "features.rds")
 
 
 # Join features to labels from validation set...
