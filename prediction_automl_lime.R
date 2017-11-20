@@ -6,6 +6,7 @@ library(tidyverse)
 
 # read in validation set
 features_and_labels <- read_rds("validation_set.rds")
+features <- read_rds("features.rds")
 
 h2o.init()
 
@@ -36,7 +37,7 @@ automl_models_h2o <- h2o.automl(
   y = y,
   training_frame    = train_h2o,
   leaderboard_frame = test_h2o,
-  max_runtime_secs  = 30
+  max_runtime_secs  = 300
 )
 
 # Extract leader model
